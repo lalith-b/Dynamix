@@ -1,0 +1,47 @@
+{
+    "development": {
+        "database": {
+            "adapter": "mongodb",
+            "host": "127.0.0.1",
+            "port": 27017
+        },
+        "express": {
+            "host": "127.0.0.1",
+            "port": 8181
+        },
+        "chat": {
+            "host": "127.0.0.1",
+            "port": 8080
+        }
+    },
+    "test": {
+        "database": {
+            "adapter": "mongodb",
+            "host": "127.0.0.1",
+            "port": 27017
+        },
+        "express": {
+            "host": "127.0.0.1",
+            "port": 8080
+        },
+        "chat": {
+            "host": "127.0.0.1",
+            "port": 8080
+        }
+    },
+    "production": {
+        "database": {
+            "adapter": "mongodb",
+            "host": "127.0.0.1",
+            "port": 27017
+        },
+        "express": {
+            "host": "127.0.0.1",
+            "port": 3000
+        },
+        "chat": {
+            "host": "127.0.0.1",
+            "port": 8080
+        }
+    }
+}

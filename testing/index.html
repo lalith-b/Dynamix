@@ -1,0 +1,381 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <title>Chatting Provider Evvo :)</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js" type="text/javascript"></script>
+    <script src="http://127.0.0.1:8080/socket.io/socket.io.js" type="text/javascript"></script>
+	<!--<script src="js/client.js" type="text/javascript"></script> -->
+</head>
+<body>
+
+<div id="login-container">
+    <label for="handle">Handle: </label>
+    <input type="text" id="handle" value=""/>
+    <input type="button" value="submit" id="btn-handle"/>
+</div>
+
+<! -- <div id="header">
+    <h1>ChatAPP</h1>
+</div>
+
+<div id="main-content">
+
+    <div id="input-box">
+        <form action="../" method="post" enctype="application/x-www-form-urlencoded">
+            <label for="shout-box">message: </label> <input type="text" id="shout-box" value=""/>
+            <input type="submit" value="send" id="btn-send"/>
+        </form>
+        <p>To join a channel type /join channel</p>
+    </div>
+
+    <h2 id="channel-header">Channels</h2>
+    <div id="channel-box">
+        <form action="../" method="post" enctype="application/x-www-form-urlencoded">
+            <label for="custom-channel-box">channel: </label> <input type="text" id="custom-channel-box" value=""/>
+            <input type="submit" value="create" id="btn-send-channel"/>
+        </form>
+        <h3>Available channels</h3>
+        <ul id="available-channels"></ul>
+    </div>
+
+    <hr/>
+
+    <div id="message-box">
+        <ul id="message-list">
+        </ul>
+    </div>
+    <h2>Users</h2>
+    <ul id="loggedin-users">
+    </ul>
+    
+    
+</div>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        
+		var socket = new io.Socket('127.0.0.1', {port: 8080});
+		var isConnected = socket.connect();
+		var sessionID = isConnected.transport.sessionid;
+		console.log('the sessionID -- '+sessionID);
+		var you = '';
+		var loggedInUsers = [];
+		var belongsToChannel = [];
+		
+		function getFormattedDate() {
+			var date = new Date();
+			return ' [ ' + date.getFullYear() + '/' + date.getMonth() + '/' + date.getDate() + ' ' + date.getHours() + ':' + date.getMinutes() + ':' + date.getSeconds() + ' ]';
+		}
+		
+		function logMessageToConsole(message) {
+			if (!$.browser.msie) {
+				console.log(message);
+			}
+		}
+		
+		function captureHandle() {
+			var handle = $('input#handle').val();
+	
+			if (handle !== '') {
+				you = handle;
+				$.ajax({
+					type: 'post',
+					url: '/user/new',
+					data: 'handle=lalith&sessionid='+handle,
+					dataType: 'json',
+					success: function(response) {
+		
+						if (response.error !== null) {
+							alert('There\'s been an error, sorry unable to store handle');
+						} else {
+							mockResponse = {};
+							mockResponse.user = you;
+							mockResponse.message = 'has connected';
+							mockResponse.type = 'connected';
+							$('#login-container').hide();
+							$('.modal-overLay').fadeOut(500);
+							insertMessage(mockResponse);
+							socket.send({message: ' has connected', user: you});
+							getLoggedInUsers();
+							getChannels();
+							$('input#shout-box').focus();
+						}
+					}
+				});
+		
+			} else {
+				alert('Please enter a handle.');
+			}
+		}
+		
+		function getLoggedInUsers() {
+			$.ajax({
+				type: 'get',
+				url: '/user/',
+				dataType: 'json',
+				success: function(response) {
+		
+					if (response.error !== null) {
+						alert('There\'s been an error, sorry unable to get logged in users');
+					} else if (response.users.length > 0) {
+						loggedInUsers = response.users;
+						$('ul#loggedin-users').children().remove();
+						_.each(loggedInUsers,function(i) {
+							$('ul#loggedin-users').append('<li id="'+ i.sessionid +'">' + i.handle + '</li>');
+						});
+					}
+				}
+			});
+		}
+		
+		function getChannels() {
+			$.ajax({
+				type: 'get',
+				url: '/channel/',
+				dataType: 'json',
+				success: function(response) {
+		
+					if (response.error !== null) {
+						alert('There\'s been an error, sorry unable to get channels');
+					} else if (response.channels.length > 0) {
+						$('ul#available-channels').children().remove();
+						var channels = response.channels;
+						_.each(channels,function(i) {
+							$('ul#available-channels').append('<li id="'+ i._id +'">' + i.channel + '</li>');
+						});
+					}
+				}
+			});
+		}
+		
+		function createChannel() {
+			var channel = $('input#custom-channel-box').val();
+		
+			if (channel !== '') {
+				$.ajax({
+					type: 'post',
+					url: '/channel/new',
+					data: 'channel=' + channel + '&sessionid=' + isConnected.transport.sessionid,
+					dataType: 'json',
+					success: function(response) {
+						if (response.error !== null) {
+							alert('There\'s been an error, sorry unable to store channel: ' + response.error);
+						} else {
+							var message = {};
+							message.type = 'channel created';
+							message.message = 'new channel created';
+							socket.send(message);
+							mockResponse = {};
+							mockResponse.user = you;
+							mockResponse.message = 'Joined channel ' + channel;
+							mockResponse.type = 'joined';
+							belongsToChannel.push({'id': response.channel[0]._id, 'name': response.channel[0].channel});
+							insertMessage(mockResponse);
+							getChannels();
+						}
+					}
+				});
+		
+			} else {
+				alert('Please enter a channel name.');
+			}
+		}
+		
+		function joinChannel(e) {
+			$.ajax({
+				type: 'post',
+				url: '/channel/join',
+				data: 'channel=' + e.target.id + '&sessionid=' + isConnected.transport.sessionid,
+				dataType: 'json',
+				success: function(response) {
+					if (response.error !== null) {
+						alert('Unable to join channel: ' + response.error);
+					} else {
+						mockResponse = {};
+						mockResponse.user = you;
+						mockResponse.message = 'Joined channel ' + response.channel.channel;
+						mockResponse.type = 'joined';
+						belongsToChannel.push({'id': response.channel._id, 'name': response.channel.channel});
+						insertMessage(mockResponse);
+						notifyChannel(response.channel._id);
+					}
+				}
+			});
+		}
+		
+		function notifyChannel(id) {
+		
+		}
+		
+		function parseMessage(message) {
+			var match = message.match(/\/[a-z0-9]*/);
+			var parsed = {};
+		
+			parsed['type'] = 'default';
+			parsed['message'] = message;
+		
+			if (match !== null) {
+				switch (match[0]) {
+					case '/r':
+						parsed['type'] = 'whisper';
+						break;
+					case '/p':
+						parsed['type'] = 'party';
+						break;
+					case '/join':
+						parsed['type'] = 'join';
+						break;
+					case '/leave':
+						parsed['type'] = 'leave';
+						break;
+					default:
+						var channel = match[0].match(/[0-9]/);
+						if (channel.length && belongsToChannel.length >= 1) {
+							var channelDetails = belongsToChannel[channel[0]-1];
+							parsed['type'] = 'channel';
+							parsed['channelId'] = channelDetails.id;
+						} else {
+							parsed['type'] = 'chat';
+						}
+		
+						break;
+				}
+		
+				parsed['message'] = message.replace(/\/[a-z]*\s|\/[a-z]*[0-9]\s/, "");
+			}
+		
+			return parsed;
+		}
+		
+		function sendMessage() {
+			var message = $('input#shout-box').val();
+			var request = parseMessage(message);
+		
+			$('input#shout-box').val('');
+		
+			if (request['type'] === 'join') {
+				logMessageToConsole('join channel: ' + request['message']);
+			} else if (request['type'] === 'leave') {
+				logMessageToConsole('leave channel: ' + request['message']);
+			} else {
+				mockResponse = {};
+				mockResponse.user = you;
+				mockResponse.message = request['message'];
+				mockResponse.type = request['type'];
+				insertMessage(mockResponse);
+				request.user = you;
+				socket.send(request);
+			}
+		
+		}
+		
+		function getHandle(id) {
+			var handle = id;
+			_.each(loggedInUsers,function(i) {
+				if (i.sessionid == id) {
+					handle = i.handle;
+					return false;
+				}
+			});
+		
+			return handle;
+		}
+		
+		function insertMessage(response) {
+			var handle = (response.user !== null && typeof response.user !== 'undefined') ? response.user:getHandle(response.id);
+			var li = $('<li>' + handle + ' ' + getFormattedDate() + ' : ' + response.message + '</li>');
+		
+			if(response.type === 'disconnected') {
+				$('li#'+response.id).remove();
+			} else if (typeof response.type !== 'undefined') {
+				li.addClass(response.type);
+			}
+		
+			$('ul#message-list').append(li);
+		}
+		
+		if (isConnected) {
+			socket.on('connect', function(data) {
+				logMessageToConsole('connect')
+			});
+		
+			socket.on('message', function(data) {
+				data = JSON.parse(data);
+				console.log(data);
+				if (data.type !== 'connected') {
+					insertMessage(data);
+					console.log('message');
+		
+				} else if (data.type !== 'channel created') {
+					getChannels();
+					console.log('channel');
+		
+				} else {
+					getLoggedInUsers();
+					console.log('load users');
+		
+				}
+			});
+		
+			socket.on('disconnect', function() {
+				$.ajax({
+					type: 'post',
+					url: '/user/delete/',
+					dataType: 'json',
+					data: 'handle=' + you + '&sessionid=' + isConnected.transport.sessionid,
+					success: function(response) {
+						logMessageToConsole('disconnect');
+					}
+				});
+			});
+		}
+        $('div#channel-box').hide();
+        $('input#handle').focus();
+        $('input#btn-handle').click(function() {
+            captureHandle();
+        });
+
+        $('input#handle').keydown(function(event) {
+            if (event.keyCode == '13') {
+                event.preventDefault();
+                captureHandle();
+            }
+        });
+
+        $('input#btn-send').click(function(event) {
+            event.preventDefault();
+            sendMessage();
+        });
+
+        $('input#shout-box').keydown(function(event) {
+            if (event.keyCode == '13') {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+
+        $('h2#channel-header').click(function(event) {
+            $('div#channel-box').toggle();
+        });
+
+        $('input#btn-send-channel').click(function(event) {
+            event.preventDefault();
+            createChannel();
+        });
+
+        $('input#custom-channel-box').keydown(function(event) {
+            if (event.keyCode == '13') {
+                event.preventDefault();
+                createChannel();
+            }
+        });
+
+        $('ul#available-channels').click(joinChannel);
+
+        
+    });
+</script>
+
+</body>
+</html>
