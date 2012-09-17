@@ -1,5 +1,9 @@
 Dynamix
-=======
+
+A MVC Based Chat application which will be embedded with iOS app, A Chat application built for iOS optimised callback function, which will enable quick access to server database with less polling. By using socket.io based backend I hope that the polling will be fast enough to enable quick data transaction between server and client.
+
+
+=====================
 (The MIT License)
 
 Copyright (c) 2012 Lalith Balasubramanian
