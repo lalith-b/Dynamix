@@ -3,7 +3,6 @@ var env = process.env.NODE_ENV ? process.env.NODE_ENV : 'development'; // expres
 var express = require('express');
 var fs = require('fs'); 
 var SETTINGS = fs.readFileSync('./config/settings.json'); // import the settings file to configure environment
-var colors = require('colors'); // for coloring terminal to show some output in meaning.
 
 /* My Works on chatSockets */
 var chatSocket = require('./modals/ChatSocket');
@@ -13,18 +12,18 @@ var DatabaseProvider = require('./datastore/DatabaseProvider').DatabaseProvider;
 var indexFile = fs.readFileSync('./testing/index.html'); //read the html page to be served (chat interface)
 
 if(env == 'development'){
-	console.log('Node and Express server in development Environment\r\n'.bold.red);
+	console.log('Node and Express server in development Environment\r\n');
 	SETTINGS = JSON.parse(SETTINGS).development;
 }else if(env == 'production'){
-	console.log('Node and Express server in production Environment\r\n'.bold.red);
+	console.log('Node and Express server in production Environment\r\n');
 	SETTINGS = JSON.parse(SETTINGS).production;
 }else if(env == 'test'){
-	console.log('Node and Express server in test Environment\r\n'.bold.red);
+	console.log('Node and Express server in test Environment\r\n');
 	SETTINGS = JSON.parse(SETTINGS).test;
 }
-console.log('Using DB Settings \n Adapter : '.green+ SETTINGS.database.adapter +'\n Host    : '.green + SETTINGS.database.host + '\n Port    : '.green +SETTINGS.database.port +'\r\n');
-console.log('Using Express Server Settings \n Host    : '.green + SETTINGS.express.host + '\n Port    : '.green +SETTINGS.express.port+'\r\n');
-console.log('Using Chat Server Settings \n Host    : '.green + SETTINGS.chat.host + '\n Port    : '.green +SETTINGS.chat.port+'\r\n');
+console.log('Using DB Settings \n Adapter : '+ SETTINGS.database.adapter +'\n Host    : '+ SETTINGS.database.host + '\n Port    : '+SETTINGS.database.port +'\r\n');
+console.log('Using Express Server Settings \n Host    : ' + SETTINGS.express.host + '\n Port    : '+SETTINGS.express.port+'\r\n');
+console.log('Using Chat Server Settings \n Host    : ' + SETTINGS.chat.host + '\n Port    : '+SETTINGS.chat.port+'\r\n');
 
 var databaseProvider = new DatabaseProvider(SETTINGS.database.host,SETTINGS.database.port);
 var userProvider = new UserProvider(databaseProvider);
@@ -36,12 +35,7 @@ var channelProvider = new ChannelProvider(databaseProvider);
  *
  **/
 
-var app = express.createServer();
-app.configure(env,function() {
-   	app.use(express.bodyParser());
-    app.use(express.methodOverride()); 
-    app.use(app.router);
-});
+var app = express();
 
 /**
  * Express server routes:
@@ -62,7 +56,7 @@ app.get('/', function(req, res) {
 app.get('/user/', function(req, res) {
    console.log('This is the bloddy Request --- '+ req.body);
    userProvider.findAll(function(error, results) {
-   	   console.log(results.cyan);
+   	   console.log(results);
        res.send({error:error, users:results});
     });
 }); 
